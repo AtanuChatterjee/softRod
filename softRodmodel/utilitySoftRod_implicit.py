@@ -18,15 +18,18 @@ class Solver:
             :param params: a dictionary containing all the parameters required for the simulation
             :return: position and velocity of each node at every time step
         '''
+        qNew = q0
+        dNp =dNp0
         iter = 0
-        normf = tol * ScaleSolver * 10
+        normf = params['tol'] * 10
         error = 1
 
-        while (normf > tol * ScaleSolver):
+        while (normf > params['tol']):
 
             forces = Forces(q, f0=params['f0'], Ng=params['Ng'], nestDir=params['nestDir'], nv=params['nv'],
                             bNode=params['boundary_node'], dt=params['dt'], kc=params['kc'],
-                            Np=params['Np'], F_ind=params['F_ind'], EA=params['EA'], EI=params['EI'], refLen=params['dL'])
+                            Np=params['Np'], F_ind=params['F_ind'], EA=params['EA'], EI=params['EI'],
+                            refLen=params['dL'])
 
             Fg = forces.getFg()  # force due to informed ants
             Fs, Js = forces.getFs()  # force due to stretching
@@ -50,18 +53,18 @@ class Solver:
 
             normf = normfNew
 
-            if (iter > maximum_iter):
+            if (iter > params['maximum_iter']):
                 error = -1
-                return qNew, error
+                return qNew, dNp, error
 
             qDotNew = F
 
-        # qNew = q0 + F * params['dt']  # position of each node at every time step
+            # qNew = q0 + F * params['dt']  # position of each node at every time step
 
             self.constraint.pinEnd(qNew, qDotNew)  # pinning the end nodes
         # self.constraint.clampEnd(qNew, qDotNew)   # clamping the end nodes
 
-        return qNew, error
+        return qNew, dNp, error
 
     def plot(self, x, currTime, size):
         '''
@@ -265,7 +268,7 @@ class Constraints:
 
 
 class Forces:
-    def __init__(self, q, f0, Ng, nestDir, nv, bNode, dt, kc, Np, F_ind, EA, EI, refLen):  # , ):
+    def __init__(self, q, f0, Ng, nestDir, nv, bNode, dt, kc, Np, F_ind, EA, EI, refLen):
         self.q = q  # position vector
         self.f0 = f0  # single ant force
         self.Ng = Ng  # number of informed ants
@@ -282,7 +285,9 @@ class Forces:
         self.Fg = None  # force due to informed ants
         self.Fp = None  # force due to pulling
         self.Fs = None  # force due to stretching
+        self.Js = None  # Jacobian of the stretching force
         self.Fb = None  # force due to bending
+        self.Jb = None  # Jacobian of bending force
 
     def getFg(self):
         '''
@@ -349,6 +354,7 @@ class Forces:
             :return: stretching force array
         '''
         Fs = np.zeros((2 * self.nv, 1))  # initialize the stretching force array to store stretching force at each node
+        Js = np.zeros((2 * self.nv, 2 * self.nv))  # initialize the Jacobian of stretching force array
         alpha = 1  # factor to scale spring force
         for k in range(self.nv - 1):
             gradEnergy = self.gradEs(self.q[2 * k], self.q[2 * k + 1], self.q[2 * k + 2], self.q[2 * k + 3],
@@ -356,9 +362,13 @@ class Forces:
                                      self.EA)  # calculate the gradient of stretching energy for kth element
             Fs[2 * k: 2 * (k + 1) + 2] = Fs[2 * k: 2 * (
                     k + 1) + 2] - gradEnergy  # subtract gradient of stretching energy from the force array
-            Fs[2 * k: 2 * (k + 1) + 2] = (
-                    Fs[2 * k: 2 * (k + 1) + 2] * alpha)  # scale the force array with the alpha factor
-        return Fs
+            # Fs[2 * k: 2 * (k + 1) + 2] = (
+            #         Fs[2 * k: 2 * (k + 1) + 2] * alpha)  # scale the force array with the alpha factor
+
+            hessEnergy = hessEs(self.q[2 * k], self.q[2 * k + 1], self.q[2 * k + 2], self.q[2 * k + 3], self.refLen[k],
+                                self.EA)
+            Js[2 * k:2 * k + 4, 2 * k:2 * k + 4] = Js[2 * k:2 * k + 4, 2 * k:2 * k + 4] - hessEnergy
+        return Fs, Js
 
     def gradEs(self, xk, yk, xkp1, ykp1, lk, EA):
         '''
@@ -397,6 +407,8 @@ class Forces:
             :return: bending force array
         '''
         Fb = np.zeros((2 * self.nv, 1))  # initialize the bending force array to store bending force at each node
+        Jb = np.zeros(
+            (2 * self.nv, 2 * self.nv))  # initialize the Jacobian matrix to store the bending force at each node
 
         for k in range(self.bNode, self.nv - 2):
             gradEnergy = self.gradEb(self.q[2 * k, 0], self.q[2 * k + 1, 0], self.q[2 * k + 2, 0], self.q[2 * k + 3, 0],
@@ -407,9 +419,14 @@ class Forces:
             Fb[2 * k: 2 * (k + 1) + 4] = Fb[2 * k: 2 * (
                     k + 1) + 4] - gradEnergy  # subtract gradient of bending energy from the force array
 
-            Fb[2 * k: 2 * (k + 1) + 4] = Fb[2 * k: 2 * (k + 1) + 4]  # scale the force array with the alpha factor
+            Fb[2 * k: 2 * (k + 1) + 4] = Fb[2 * k: 2 * (k + 1) + 4]
 
-        return Fb
+            hessEnergy = hessEb(self.q[2 * k, 0], self.q[2 * k + 1, 0], self.q[2 * k + 2, 0], self.q[2 * k + 3, 0],
+                                self.q[2 * k + 4, 0],
+                                self.q[2 * k + 5, 0], 0, self.refLen[k], self.EI)
+            Jb[2 * k:2 * k + 6, 2 * k:2 * k + 6] = Jb[2 * k:2 * k + 6, 2 * k:2 * k + 6] - hessEnergy
+
+        return Fb, Jb
 
     def gradEb(self, xkm1, ykm1, xk, yk, xkp1, ykp1, curvature0, lk, EI):
         '''
@@ -476,29 +493,42 @@ class Forces:
         return F
 
     def hessEb(self, xkm1, ykm1, xk, yk, xkp1, ykp1, curvature0, lk, EI):
-        node0 = np.array([xkm1, ykm1, 0])
-        node1 = np.array([xk, yk, 0])
-        node2 = np.array([xkp1, ykp1, 0])
+        '''
+        Hessian of bending energy
+            :param xkm1: x-1 position of node k
+            :param ykm1: y-1 position of node k
+            :param xk: x position of node k
+            :param yk: y position of node k
+            :param xkp1: x+1 position of node k
+            :param ykp1: y+1 position of node k
+            :param curvature0: initial curvature
+            :param lk: un-stretched length
+            :param EI: flexural rigidity
+            :return: bending force
+        '''
+        node0 = np.array([xkm1, ykm1, 0])  # node 0
+        node1 = np.array([xk, yk, 0])  # node 1
+        node2 = np.array([xkp1, ykp1, 0])  # node 2
 
-        m2e = np.array([0, 0, 1])
-        m2f = np.array([0, 0, 1])
-        kappaBar = curvature0
+        m2e = np.array([0, 0, 1])  # material to element coordinate transformation matrix
+        m2f = np.array([0, 0, 1])  # material to global coordinate transformation matrix
+        kappaBar = curvature0  # initial curvature
 
         #   Computation of gradient of the two curvatures
-        gradKappa = np.zeros((6, 1))
+        gradKappa = np.zeros((6, 1))  # initialize the gradient of curvature array
 
-        ee = node1 - node0
-        ef = node2 - node1
+        ee = node1 - node0  # edge vector
+        ef = node2 - node1  # edge vector
 
-        norm_e = np.linalg.norm(ee)
-        norm_f = np.linalg.norm(ef)
+        norm_e = np.linalg.norm(ee)  # norm of edge vector
+        norm_f = np.linalg.norm(ef)  # norm of edge vector
 
-        te = ee / norm_e
-        tf = ef / norm_f
+        te = ee / norm_e  # unit vector
+        tf = ef / norm_f  # unit vector
 
         # Curvature binormal
-        if (1.0 + np.dot(te, tf)) == 0:
-            kb = 2.0 * np.cross(te, tf) / (1.0 + np.dot(te, tf) + 1e34)
+        if (1.0 + np.dot(te, tf)) == 0:  # check if the dot product is zero
+            kb = 2.0 * np.cross(te, tf) / (1.0 + np.dot(te, tf) + 1e34)  # curvature binormal
             chi = 1.0 + np.dot(te, tf) + 1e34
         else:
             kb = 2.0 * np.cross(te.T, tf.T) / (1.0 + np.dot(te, tf))
@@ -519,47 +549,49 @@ class Forces:
         gradKappa[4:6, 0] = Dkappa1Df[0:2]
 
         #   Gradient of Eb
-        DDkappa1 = np.zeros((6, 6))
+        DDkappa1 = np.zeros((6, 6))  # initialize the hessian of curvature array
 
-        norm2_e = norm_e ** 2
-        norm2_f = norm_f ** 2
+        norm2_e = norm_e ** 2  # norm of edge vector squared
+        norm2_f = norm_f ** 2  # norm of edge vector squared
 
-        tilde_t_transpose = tilde_t[:, np.newaxis]
-        tt_o_tt = tilde_t_transpose * tilde_t
+        tilde_t_transpose = tilde_t[:, np.newaxis]  # transpose of tilde_t
+        tt_o_tt = tilde_t_transpose * tilde_t  # outer product of tilde_t
 
-        tmp = np.cross(tf, tilde_d2)
-        tmp_transpose = tmp[:, np.newaxis]
-        tf_c_d2t_o_tt = tmp_transpose * tilde_t
+        tmp = np.cross(tf, tilde_d2)  # temporary variable
+        tmp_transpose = tmp[:, np.newaxis]  # transpose of tmp
+        tf_c_d2t_o_tt = tmp_transpose * tilde_t  # outer product of tmp and tilde_t
 
-        tt_o_tf_c_d2t = np.transpose(tf_c_d2t_o_tt)
-        kb_transpose = kb[:, np.newaxis]
-        kb_o_d2e = kb_transpose * m2e
-        d2e_o_kb = np.transpose(kb_o_d2e)
+        tt_o_tf_c_d2t = np.transpose(tf_c_d2t_o_tt)  # transpose of tf_c_d2t_o_tt
+        kb_transpose = kb[:, np.newaxis]  # transpose of kb
+        kb_o_d2e = kb_transpose * m2e  # outer product of kb and m2e
+        d2e_o_kb = np.transpose(kb_o_d2e)  # transpose of kb_o_d2e
 
-        Id3 = np.identity(3)
-        te_transpose = te[:, np.newaxis]
+        Id3 = np.identity(3)  # identity matrix
+        te_transpose = te[:, np.newaxis]  # transpose of te
         D2kappa1De2 = 1.0 / norm2_e * (2 * kappa1 * tt_o_tt - tf_c_d2t_o_tt - tt_o_tf_c_d2t) - kappa1 / (
-                    chi * norm2_e) * (
-                              Id3 - te_transpose * te) + 1.0 / (4.0 * norm2_e) * (kb_o_d2e + d2e_o_kb)
+                chi * norm2_e) * (
+                              Id3 - te_transpose * te) + 1.0 / (4.0 * norm2_e) * (
+                              kb_o_d2e + d2e_o_kb)  # hessian of curvature
 
-        tmp = np.cross(te, tilde_d2)
-        tmp_transpose = tmp[:, np.newaxis]
-        te_c_d2t_o_tt = tmp_transpose * tilde_t
+        tmp = np.cross(te, tilde_d2)  # temporary variable
+        tmp_transpose = tmp[:, np.newaxis]  # transpose of tmp
+        te_c_d2t_o_tt = tmp_transpose * tilde_t  # outer product of tmp and tilde_t
 
-        tt_o_te_c_d2t = np.transpose(te_c_d2t_o_tt)
-        kb_o_d2f = kb_transpose * m2f
-        d2f_o_kb = np.transpose(kb_o_d2f)
+        tt_o_te_c_d2t = np.transpose(te_c_d2t_o_tt)  # transpose of te_c_d2t_o_tt
+        kb_o_d2f = kb_transpose * m2f  # outer product of kb and m2f
+        d2f_o_kb = np.transpose(kb_o_d2f)  # transpose of kb_o_d2f
 
-        tf_transpose = tf[:, np.newaxis]
+        tf_transpose = tf[:, np.newaxis]  # transpose of tf
 
         D2kappa1Df2 = 1.0 / norm2_f * (2 * kappa1 * tt_o_tt + te_c_d2t_o_tt + tt_o_te_c_d2t) - kappa1 / (
-                    chi * norm2_f) * (
-                              Id3 - tf_transpose * tf) + 1.0 / (4.0 * norm2_f) * (kb_o_d2f + d2f_o_kb)
+                chi * norm2_f) * (
+                              Id3 - tf_transpose * tf) + 1.0 / (4.0 * norm2_f) * (
+                              kb_o_d2f + d2f_o_kb)  # hessian of curvature
 
         D2kappa1DeDf = -kappa1 / (chi * norm_e * norm_f) * (Id3 + te_transpose * tf) + 1.0 / (norm_e * norm_f) * (
-                2 * kappa1 * tt_o_tt - tf_c_d2t_o_tt + tt_o_te_c_d2t - crossMat(tilde_d2))
+                2 * kappa1 * tt_o_tt - tf_c_d2t_o_tt + tt_o_te_c_d2t - crossMat(tilde_d2))  # hessian of curvature
 
-        D2kappa1DfDe = np.transpose(D2kappa1DeDf)
+        D2kappa1DfDe = np.transpose(D2kappa1DeDf)  # transpose of D2kappa1DeDf
 
         #   Curvature terms
         DDkappa1[0: 2, 0: 2] = D2kappa1De2[0: 2, 0: 2]
@@ -575,13 +607,16 @@ class Forces:
         DDkappa1[4: 6, 4: 6] = D2kappa1Df2[0: 2, 0: 2]
 
         #   Hessian of Eb
-        dkappa = kappa1 - kappaBar
-        dJ = 1.0 / lk * EI * gradKappa * np.transpose(gradKappa)
+        dkappa = kappa1 - kappaBar  # curvature difference
+        dJ = 1.0 / lk * EI * gradKappa * np.transpose(gradKappa)  # bending energy gradient
         temp = 1.0 / lk * dkappa * EI
-        dJ = dJ + temp * DDkappa1
+        dJ = dJ + temp * DDkappa1  # bending energy hessian
         return dJ
 
     def hessEs(self, xk, yk, xkp1, ykp1, lk, EA):
+        '''
+            Hessian of Es
+        '''
         J = np.zeros((4, 4))
 
         J[0, 0] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (-2 * xkp1 + 2 * xk) ** 2) / 2 + (
@@ -596,13 +631,13 @@ class Forces:
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (-2 * xkp1 + 2 * xk) * (
                           -2 * ykp1 + 2 * yk) / 2
         J[0, 2] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (2 * xkp1 - 2 * xk) * (
-                    -2 * xkp1 + 2 * xk)) / 2 + (
+                -2 * xkp1 + 2 * xk)) / 2 + (
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (-2 * xkp1 + 2 * xk) * (
                           2 * xkp1 - 2 * xk) / 2 + 2 * (1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-1 / 2)) / lk
         J[0, 3] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (2 * ykp1 - 2 * yk) * (
-                    -2 * xkp1 + 2 * xk)) / 2 + (
+                -2 * xkp1 + 2 * xk)) / 2 + (
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (-2 * xkp1 + 2 * xk) * (
                           2 * ykp1 - 2 * yk) / 2
@@ -613,12 +648,12 @@ class Forces:
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-1 / 2)) / lk
         J[1, 2] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (2 * xkp1 - 2 * xk) * (
-                    -2 * ykp1 + 2 * yk)) / 2 + (
+                -2 * ykp1 + 2 * yk)) / 2 + (
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (-2 * ykp1 + 2 * yk) * (
                           2 * xkp1 - 2 * xk) / 2
         J[1, 3] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (2 * ykp1 - 2 * yk) * (
-                    -2 * ykp1 + 2 * yk)) / 2 + (
+                -2 * ykp1 + 2 * yk)) / 2 + (
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (-2 * ykp1 + 2 * yk) * (
                           2 * ykp1 - 2 * yk) / 2 + 2 * (1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
@@ -630,7 +665,7 @@ class Forces:
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-1 / 2)) / lk
         J[2, 3] = (1 / ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk ** 2 * (2 * ykp1 - 2 * yk) * (
-                    2 * xkp1 - 2 * xk)) / 2 + (
+                2 * xkp1 - 2 * xk)) / 2 + (
                           1 - np.sqrt(((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2)) / lk) * (
                           ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-3 / 2)) / lk * (2 * xkp1 - 2 * xk) * (
                           2 * ykp1 - 2 * yk) / 2

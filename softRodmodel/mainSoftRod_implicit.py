@@ -2,11 +2,11 @@ import os
 import math
 import numpy as np
 import pandas as pd
-from utilitySoftRod import *
+from utilitySoftRod_implicit import *
 import matplotlib.pyplot as plt
 
 
-def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_ind, f0, alpha):
+def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_ind, f0, alpha, tol, maximum_iter):
     '''
         This function obtains the geometry, state vectors and sets the simulation parameters
     '''
@@ -47,7 +47,9 @@ def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_i
         'F_ind': F_ind,  # individuality parameter (default F_ind=0.428)
         'l': l,  # rod length/ring diameter
         'EI': EI,  # flexural rigidity
-        'EA': EA  # stiffness
+        'EA': EA,  # stiffness
+        'tol': tol, # tolerance for Newton solver
+        'maximum_iter': maximum_iter # maximum number of iterations for Newton solver
     }
     ############################# Plot rod ##########################################
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -64,11 +66,13 @@ def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_i
         solver = Solver(constraint)
 
         # Solve
-        q, error  = solver.solve(q, q0, qDot, dNp0, params=params)
-        #
-        # if error < 0:
-        #     print('Could not converge. Sorry!\n')
-        #     break
+        q, dNp, error  = solver.solve(q, q0, qDot, dNp0, params=params)
+
+        print(error)
+
+        if error < 0:
+            print('Could not converge. Sorry!\n')
+            break
 
         qDot = (q - q0) / dt  # update rate of change
         ctime += dt  # update current time
@@ -123,4 +127,4 @@ if __name__ == '__main__':
         raise ValueError('dNp0 is out of range')
 
     main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir=0, kc=0.7,
-         F_ind=0.428, f0=28, alpha=1)
+         F_ind=0.428, f0=28, alpha=1, tol=1e-3, maximum_iter=1000)
