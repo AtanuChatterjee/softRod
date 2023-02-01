@@ -127,4 +127,4 @@ if __name__ == '__main__':
         raise ValueError('dNp0 is out of range')
 
     main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir=0, kc=0.7,
-         F_ind=0.428, f0=28, alpha=1, tol=1e-3, maximum_iter=1000)
+         F_ind=0.428, f0=28, alpha=1, tol=1e-2, maximum_iter=10000)

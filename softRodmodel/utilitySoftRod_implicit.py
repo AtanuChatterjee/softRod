@@ -19,7 +19,7 @@ class Solver:
             :return: position and velocity of each node at every time step
         '''
         qNew = q0
-        dNp =dNp0
+        dNp = dNp0
         iter = 0
         normf = params['tol'] * 10
         error = 1
@@ -39,10 +39,10 @@ class Solver:
 
             Fp, dNp = forces.getFp(F, dNp0)  # force due to pulling
 
-            F = (Fp - (Fs + Fg + Fb)) * params['gamma']  # force due to damping
+            F = (Fp - (Fg + Fs + Fb)) * params['gamma']  # force due to damping
 
             #   Manipulate Jacobians
-            J = - (Jb + Js)
+            J = np.eye(len(q)) - 2 * params['f0'] * params['kc'] * np.cosh(F / params['F_ind']) * params['dt'] - (Jb + Js)
 
             #   Newton's Update
             qNew = qNew - np.matmul(np.linalg.inv(J), F)
@@ -365,8 +365,9 @@ class Forces:
             # Fs[2 * k: 2 * (k + 1) + 2] = (
             #         Fs[2 * k: 2 * (k + 1) + 2] * alpha)  # scale the force array with the alpha factor
 
-            hessEnergy = hessEs(self.q[2 * k], self.q[2 * k + 1], self.q[2 * k + 2], self.q[2 * k + 3], self.refLen[k],
-                                self.EA)
+            hessEnergy = self.hessEs(self.q[2 * k], self.q[2 * k + 1], self.q[2 * k + 2], self.q[2 * k + 3],
+                                     self.refLen[k],
+                                     self.EA)
             Js[2 * k:2 * k + 4, 2 * k:2 * k + 4] = Js[2 * k:2 * k + 4, 2 * k:2 * k + 4] - hessEnergy
         return Fs, Js
 
@@ -421,9 +422,9 @@ class Forces:
 
             Fb[2 * k: 2 * (k + 1) + 4] = Fb[2 * k: 2 * (k + 1) + 4]
 
-            hessEnergy = hessEb(self.q[2 * k, 0], self.q[2 * k + 1, 0], self.q[2 * k + 2, 0], self.q[2 * k + 3, 0],
-                                self.q[2 * k + 4, 0],
-                                self.q[2 * k + 5, 0], 0, self.refLen[k], self.EI)
+            hessEnergy = self.hessEb(self.q[2 * k, 0], self.q[2 * k + 1, 0], self.q[2 * k + 2, 0], self.q[2 * k + 3, 0],
+                                     self.q[2 * k + 4, 0],
+                                     self.q[2 * k + 5, 0], 0, self.refLen[k], self.EI)
             Jb[2 * k:2 * k + 6, 2 * k:2 * k + 6] = Jb[2 * k:2 * k + 6, 2 * k:2 * k + 6] - hessEnergy
 
         return Fb, Jb
@@ -491,6 +492,11 @@ class Forces:
         F = gradKappa * EI * dkappa / lk  # bending force
 
         return F
+
+    def crossMat(self, a):
+        A = np.array([[0, -a[2], a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
+
+        return A
 
     def hessEb(self, xkm1, ykm1, xk, yk, xkp1, ykp1, curvature0, lk, EI):
         '''
@@ -589,7 +595,7 @@ class Forces:
                               kb_o_d2f + d2f_o_kb)  # hessian of curvature
 
         D2kappa1DeDf = -kappa1 / (chi * norm_e * norm_f) * (Id3 + te_transpose * tf) + 1.0 / (norm_e * norm_f) * (
-                2 * kappa1 * tt_o_tt - tf_c_d2t_o_tt + tt_o_te_c_d2t - crossMat(tilde_d2))  # hessian of curvature
+                2 * kappa1 * tt_o_tt - tf_c_d2t_o_tt + tt_o_te_c_d2t - self.crossMat(tilde_d2))  # hessian of curvature
 
         D2kappa1DfDe = np.transpose(D2kappa1DeDf)  # transpose of D2kappa1DeDf
 
