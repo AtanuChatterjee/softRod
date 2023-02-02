@@ -21,7 +21,14 @@ class Solver:
         qNew = q0
         dNp = dNp0
         iter = 0
-        normf = params['tol'] * 10
+
+        # if (np.linalg.norm(params['f0'] * params['Ng'] * params['gamma'] * np.array([np.cos(params['nestDir']), np.sin(params['nestDir'])])) == 0.0):
+        #     ScaleSolver = 1.0
+        #     print('Inspect ScaleSolver variable. Setting it to 1\n');
+        # else:
+        # ScaleSolver = params['EI'] / params['l'] ** 2
+
+        normf = params['tol']
         error = 1
 
         while (normf > params['tol']):
@@ -38,12 +45,12 @@ class Solver:
             F = qDot
 
             Fp, dNp = forces.getFp(F, dNp0)  # force due to pulling
-            Jp = forces.getJp(F)  # Jacobian due to pulling
+            Jp = forces.getJp(dNp)  # Jacobian due to pulling
 
             F = (Fp - (Fg + Fs + Fb)) * params['gamma']  # force due to damping
 
             #   Manipulate Jacobians
-            J = (- Jp - (Jb + Js))
+            J = (Jp - (Jb + Js) * params['gamma'])
 
             #   Newton's Update
             qNew = qNew - np.matmul(np.linalg.inv(J), F)
@@ -285,6 +292,7 @@ class Forces:
         self.refLen = refLen  # reference length of the rod
         self.Fg = None  # force due to informed ants
         self.Fp = None  # force due to pulling
+        self.Jp = None  # Jacobian of the pulling force
         self.Fs = None  # force due to stretching
         self.Js = None  # Jacobian of the stretching force
         self.Fb = None  # force due to bending
@@ -344,18 +352,40 @@ class Forces:
 
         return Fp, dNp
 
-    def getJp(self, FOld):
-        '''
-        Obtain Jacobian of the force due to pulling
-            :param FOld: force from previous time step
-            :param dNp0: initial (Np+ - Np-)
-            :return: Jacobian of the force due to pulling
-        '''
-        Jp = np.zeros((2 * self.nv, 1)) # create an array of zeros to store the Jacobian of the force due to pulling
+    def getJp(self, dNp):
+        J = np.zeros((2 * self.nv, 2 * self.nv))  # initialize an array of zeros to store the Jacobian matrix
 
         for k in range(self.bNode, self.nv):
-            Jp = - 2 * self.kc * self.f0 * self.dt * np.cosh(FOld[k] / self.F_ind)
-        return Jp
+            q_ = self.q[2 * k: 2 * k + 2, :]  # Get the position vector
+            q_perpendicular = np.array(
+                [-q_[1, 0], q_[0, 0]])  # get the normal vector with respect to the position vector
+            q_perpendicular = q_perpendicular[:, np.newaxis]  # Making it a column vector
+
+            if np.linalg.norm(q_perpendicular) == 0:
+                chi = np.linalg.norm(q_perpendicular) + 1e34  # add a small value to avoid divide by zero error
+            else:
+                chi = np.linalg.norm(q_perpendicular)
+
+            unit = q_perpendicular / chi  # normalize the normal vector
+
+            dNpk = dNp[k]  # get the difference of the number of pulling ants for node k
+            dFp_ = self.f0 * unit  # calculate the derivative of the force due to pulling with respect to dNp
+
+            J[2 * k: 2 * k + 2, k] = dFp_  # store the derivative of the force due to pulling in the Jacobian matrix
+
+        return J  # return the Jacobian matrix
+
+    # def getJp(self, FOld):
+    #     '''
+    #     Obtain Jacobian of the force due to pulling
+    #         :param FOld: force from previous time step
+    #         :return: Jacobian of the force due to pulling
+    #     '''
+    #     Jp = np.zeros((2 * self.nv, 2 * self.nv)) # create an array of zeros to store the Jacobian of the force due to pulling
+    #
+    #     for k in range(self.bNode, self.nv):
+    #         Jp = - 2 * self.kc * self.f0 * self.dt * np.cosh(FOld[k] / self.F_ind)
+    #     return Jp
 
     def getFs(self):
         '''
