@@ -38,11 +38,12 @@ class Solver:
             F = qDot
 
             Fp, dNp = forces.getFp(F, dNp0)  # force due to pulling
+            Jp = forces.getJp(F)  # Jacobian due to pulling
 
             F = (Fp - (Fg + Fs + Fb)) * params['gamma']  # force due to damping
 
             #   Manipulate Jacobians
-            J = np.eye(len(q)) - 2 * params['f0'] * params['kc'] * np.cosh(F / params['F_ind']) * params['dt'] - (Jb + Js)
+            J = (- Jp - (Jb + Js))
 
             #   Newton's Update
             qNew = qNew - np.matmul(np.linalg.inv(J), F)
@@ -342,6 +343,19 @@ class Forces:
             Fp[2 * k: 2 * k + 2] = Fp_  # store the force due to pulling at kth node
 
         return Fp, dNp
+
+    def getJp(self, FOld):
+        '''
+        Obtain Jacobian of the force due to pulling
+            :param FOld: force from previous time step
+            :param dNp0: initial (Np+ - Np-)
+            :return: Jacobian of the force due to pulling
+        '''
+        Jp = np.zeros((2 * self.nv, 1)) # create an array of zeros to store the Jacobian of the force due to pulling
+
+        for k in range(self.bNode, self.nv):
+            Jp = - 2 * self.kc * self.f0 * self.dt * np.cosh(FOld[k] / self.F_ind)
+        return Jp
 
     def getFs(self):
         '''
