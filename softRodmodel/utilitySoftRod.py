@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+from scipy.integrate import RK45
 import matplotlib.pyplot as plt
 
 
@@ -39,6 +40,7 @@ class Solver:
 
         self.constraint.pinEnd(qNew, qDotNew)  # pinning the end nodes
         # self.constraint.clampEnd(qNew, qDotNew)   # clamping the end nodes
+        # self.constraint.freeEnd(qNew, qDotNew)  # free end nodes
 
         return qNew, dNp
 
@@ -56,8 +58,8 @@ class Solver:
         plt.plot(x1, x2, 'ko-')
         plt.xlabel(r'$x~[cm]$')
         plt.ylabel(r'$y~[cm]$')
-        plt.xlim([-(size + 1), (size + 1)])
-        plt.ylim([-(size + 1), (size + 1)])
+        plt.xlim([-1.2 * size, 1.2 * size])
+        plt.ylim([-1.2 * size, 1.2 * size])
         plt.title(f'$t = {currTime:.2f}$')
         plt.tight_layout()
 
@@ -87,8 +89,8 @@ class Simulation:
             :return: simulation step size, step intervals when the plots are updated, number of simulation steps
         '''
         # Set the simulation step size, step intervals when the plots are updated and number of simulation steps
-        dt = 1e-6
-        plotStep = 1e5
+        dt = 1e-1
+        plotStep = 1e2
         Nsteps = round(self.totalTime / dt)
         return dt, plotStep, Nsteps
 
@@ -242,6 +244,16 @@ class Constraints:
         qDot[2] = 0  # set angular velocity of endpoint to 0
         qDot[3] = 0  # set angular velocity of endpoint to 0
 
+    def freeEnd(self, q, qDot):
+        """
+            Free the endpoint
+        """
+        q[0] = q[0]
+        q[1] = q[1]
+        qDot[0] = qDot[0]
+        qDot[1] = qDot[1]
+
+
 
 class Forces:
     def __init__(self, q, f0, Ng, nestDir, nv, bNode, dt, kc, Np, F_ind, EA, EI, refLen):  # , ):
@@ -328,7 +340,7 @@ class Forces:
             :return: stretching force array
         '''
         Fs = np.zeros((2 * self.nv, 1))  # initialize the stretching force array to store stretching force at each node
-        alpha = 1  # factor to scale spring force
+
         for k in range(self.nv - 1):
             gradEnergy = self.gradEs(self.q[2 * k], self.q[2 * k + 1], self.q[2 * k + 2], self.q[2 * k + 3],
                                      self.refLen[k],
@@ -336,7 +348,7 @@ class Forces:
             Fs[2 * k: 2 * (k + 1) + 2] = Fs[2 * k: 2 * (
                     k + 1) + 2] - gradEnergy  # subtract gradient of stretching energy from the force array
             Fs[2 * k: 2 * (k + 1) + 2] = (
-                    Fs[2 * k: 2 * (k + 1) + 2] * alpha)  # scale the force array with the alpha factor
+                    Fs[2 * k: 2 * (k + 1) + 2])  # scale the force array with the alpha factor
         return Fs
 
     def gradEs(self, xk, yk, xkp1, ykp1, lk, EA):
@@ -361,7 +373,9 @@ class Forces:
         F[3] = (1 - np.sqrt((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / lk) / (
                 np.sqrt((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) * lk) * 2 * (ykp1 - yk)  # y+1 component of force
 
-        F = 0.5 * EA * lk * F  # multiply the force with the stiffness and reference length
+        alpha = 1  # factor to scale spring force
+
+        F = alpha * 0.5 * EA * lk * F  # multiply the force with the stiffness and reference length
 
         return F
 

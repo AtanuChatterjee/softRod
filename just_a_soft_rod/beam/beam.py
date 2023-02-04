@@ -54,5 +54,5 @@ def main(nv, w, t, l, Y, mass, g, d, p, totalTime):
 
 
 if __name__ == '__main__':
-    nv = 15
-    main(nv, w=1.5e-2, t=0.91e-3, l=10e-2, Y=2.5e7, mass=1.65e-3, g=np.array([0, -9.81]), d=0.75, p=np.array([0, 0]), totalTime=1)
+    nv = 5
+    main(nv, w=14.5e-3, t=0.54e-3, l=10e-2, Y=0.5e6, mass=1.10e-3, g=np.array([0, -9.81]), d=0.75, p=np.array([0, 0]), totalTime=1)

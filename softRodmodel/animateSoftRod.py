@@ -11,7 +11,7 @@ def rodGIF(qDataFile, rodLength):
         Animate rod motion and save as GIF
     '''
     dt = 0.001  # Time step
-    n = 1000  # Number of frames to skip
+    n = 100  # Number of frames to skip
 
     def get_data_x(i):  # Get x data
         return x.loc[i]
@@ -41,16 +41,16 @@ def rodGIF(qDataFile, rodLength):
     frame_text = ax.text(0.02, 0.92, '', transform=ax.transAxes)  # Set time text
 
     ax.set(xlabel=r'$x~[cm]$', ylabel=r'$y~[cm]$')
-    ax.set(xlim=[-(rodLength + 1), (rodLength + 1)], ylim=[-(rodLength + 1), (rodLength + 1)])
+    ax.set(xlim=[-1.2 * rodLength, 1.2 * rodLength], ylim=[-1.2 * rodLength, 1.2 * rodLength])
     ax.grid('both', linestyle='--', linewidth=1)
 
     animRod = FuncAnimation(fig, animateRod, frames=nFrames // n, interval=1000, blit=True)
 
     gifFile = qDataFile.replace('qData_', 'rod_')
-    animRod.save(gifFile.replace('.csv', '.gif'), dpi=150, writer=PillowWriter(fps=10))
+    animRod.save(gifFile.replace('.csv', '.gif'), dpi=80, writer=PillowWriter(fps=10))
 
 
-path = 'data/nv13'  # Path to data folder
+path = 'data/nv11'  # Path to data folder
 qDataFile = glob.glob(os.path.join(path, '*qData*'))[0]  # Get qData file
 rodLength = int(qDataFile.split('_')[1][1:])  # Get rod length
 

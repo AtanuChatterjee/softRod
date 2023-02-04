@@ -37,9 +37,11 @@ def calculate_density_and_youngs_modulus(mass, length, width, thickness, deflect
 
     return density, youngs_modulus
 
-ans = calculate_density_and_youngs_modulus(1.65e-3, 10e-2, 1.5e-2, 0.9e-3, 0.919e-2)
+white = calculate_density_and_youngs_modulus(1.65e-3, 10e-2, 14.5e-3, 0.94e-3, 0.68e-2)
+print('white beam density =', white[0], '\n' 'white beam Young\'s modulus =', white[1])
 
-print(ans)
+red = calculate_density_and_youngs_modulus(1.10e-3, 10e-2, 14.5e-3, 0.54e-3, 0.84e-2)
+print('red beam density =', red[0], '\n' 'red beam Young\'s modulus =', red[1])
 
 
 
