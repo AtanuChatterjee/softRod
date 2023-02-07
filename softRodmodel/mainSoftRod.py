@@ -95,12 +95,13 @@ if __name__ == '__main__':
     nv = 11  # number of node vertices
     bnode = 1  # boundary node
     totalTime = 500  # simulation duration
-    Gamma = 1e-4  # damping factor
+    Gamma = 1e-6  # damping factor
 
     # l, w, t, Y = 5, 0.086, 0.094, 8e6  # white rod variables [cgs units]: length, width, thickness, young's modulus
-    # l, w, t, Y = 20, 0.09, 0.075, 5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
+    l, w, t, Y = 5, 0.09, 0.075, 5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
 
-    l, w, t, Y = 10, 0.09, 0.01, 0.5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
+    # l, w, t, Y = 20, 0.09, 0.001, 0.5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
+    # l, w, t, Y = 5, 0.086, 0.01, 8e6  # white rod variables [cgs units]: length, width, thickness, young's modulus
 
     if l == 5:
         N = 50
@@ -108,11 +109,11 @@ if __name__ == '__main__':
 
     elif l == 10:
         N = 100
-        G = 0.001 * N
+        G = 0.01 * N
 
     elif l == 20:
         N = 200
-        G = 0.1 * N
+        G = 0.01 * N
 
     Np = N / (nv - 1)
     Ng = G / (nv - 1)
@@ -122,4 +123,4 @@ if __name__ == '__main__':
         raise ValueError('dNp0 is out of range')
 
     main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir=0, kc=0.7,
-         F_ind=0.428, f0=17.5, alpha=1)
+         F_ind=0.428, f0=18000, alpha=1)
