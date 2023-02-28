@@ -89,8 +89,8 @@ class Simulation:
             :return: simulation step size, step intervals when the plots are updated, number of simulation steps
         '''
         # Set the simulation step size, step intervals when the plots are updated and number of simulation steps
-        dt = 1e-1
-        plotStep = 1e2
+        dt = 1e-2
+        plotStep = 1e3
         Nsteps = round(self.totalTime / dt)
         return dt, plotStep, Nsteps
 

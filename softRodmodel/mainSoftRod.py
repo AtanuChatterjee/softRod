@@ -86,26 +86,26 @@ def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_i
     if not os.path.exists(directory):  # create directory if it does not exist
         os.makedirs(directory)  # create directory
 
-    qData.to_csv(os.path.join(directory, 'qData_l{}_nv{}'.format(l, nv) + '.csv'), index=False)  # save data
-    qDotData.to_csv(os.path.join(directory, 'qDotData_l{}_nv{}'.format(l, nv) + '.csv'), index=False)  # save data
+    # qData.to_csv(os.path.join(directory, 'qData_l{}_nv{}'.format(l, nv) + '.csv'), index=False)  # save data
+    # qDotData.to_csv(os.path.join(directory, 'qDotData_l{}_nv{}'.format(l, nv) + '.csv'), index=False)  # save data
     print('Done with execution!')
 
 
 if __name__ == '__main__':
-    nv = 11  # number of node vertices
-    bnode = 1  # boundary node
+    nv = 6  # number of node vertices
+    bnode = 0  # boundary node
     totalTime = 500  # simulation duration
-    Gamma = 1e-6  # damping factor
+    Gamma = 0.0121  # damping factor
 
-    # l, w, t, Y = 5, 0.086, 0.094, 8e6  # white rod variables [cgs units]: length, width, thickness, young's modulus
-    l, w, t, Y = 5, 0.09, 0.075, 5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
+    l, w, t, Y = 5, 0.086, 0.03, 1e4  # white rod variables [cgs units]: length, width, thickness, young's modulus
+    # l, w, t, Y = 5, 0.09, 0.075, 5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
 
     # l, w, t, Y = 20, 0.09, 0.001, 0.5e6  # red rod variables [cgs units]: length, width, thickness, young's modulus
     # l, w, t, Y = 5, 0.086, 0.01, 8e6  # white rod variables [cgs units]: length, width, thickness, young's modulus
 
     if l == 5:
-        N = 50
-        G = 0.001 * N
+        N = 36
+        G = 0 * N
 
     elif l == 10:
         N = 100
@@ -123,4 +123,4 @@ if __name__ == '__main__':
         raise ValueError('dNp0 is out of range')
 
     main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir=0, kc=0.7,
-         F_ind=0.428, f0=18000, alpha=1)
+         F_ind=0.428, f0=2, alpha=1)
