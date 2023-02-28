@@ -146,18 +146,21 @@ def main(dataContour, dataSkeleton, g, lmax, Npoints):
 
     print('saving data ...')
 
+    # Calculate the x- and y-distances of each tracked point from the pivot point
     rx = [(x - x[0]) for k, x in enumerate(tx)]
     ry = [(y - y[0]) for k, y in enumerate(ty)]
-    r = [(a ** 2 + b ** 2) ** 0.5 for a, b in zip(rx, ry)]  # distance of tracked pt. from pivot pt.
+
+    # Create a pandas DataFrame to store the x and y values for each node
+    df_xy = pd.DataFrame({'Node{}x'.format(i): rx[i] for i in range(len(rx))})
+    df_xy = df_xy.assign(**{'Node{}y'.format(i): ry[i] for i in range(len(ry))})
+    df_xy.index = np.arange(1, len(df_xy) + 1)
 
     theta = np.degrees(np.arctan2(ry, rx)) % 360  # angle of tracked pt. with respect to pivot pt.
-
-    df_r, df_theta = pd.DataFrame(r), pd.DataFrame(theta)
-
-    df_r = pd.DataFrame(r, columns=['Node{}'.format(cols) for cols in df_r.columns])
+    df_theta = pd.DataFrame(theta)
     df_theta = pd.DataFrame(theta, columns=['Node{}'.format(cols) for cols in df_theta.columns])
-    df_r.index, df_theta.index = np.arange(1, len(df_r) + 1), np.arange(1, len(df_theta) + 1)
-    df_r.to_csv(vidpath + color + type + data + video + '_output_r.csv', index_label='Frame_No')
+    df_theta.index = np.arange(1, len(df_theta) + 1)
+
+    df_xy.to_csv(vidpath + color + type + data + video + '_output_xy.csv', index_label='Frame_No')
     df_theta.to_csv(vidpath + color + type + data + video + '_output_theta.csv', index_label='Frame_No')
 
     print('done!')
