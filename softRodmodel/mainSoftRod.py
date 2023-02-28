@@ -94,7 +94,11 @@ def main(nv, bnode, totalTime, Np, Ng, l, w, t, Y, gamma, dNp0, nestDir, kc, F_i
 if __name__ == '__main__':
     nv = 6  # number of node vertices
     bnode = 0  # boundary node
+<<<<<<< HEAD
     totalTime = 1200  # simulation duration
+=======
+    totalTime = 100  # simulation duration
+>>>>>>> 15d4ec18f60b91ba2788aafd653f123672c541c2
     Gamma = 0.0121  # damping factor
 
     l, w, t, Y = 5, 0.086, 0.03, 1e4  # white rod variables [cgs units]: length, width, thickness, young's modulus

@@ -170,9 +170,9 @@ if __name__ == '__main__':
 
     vidpath = 'Z:/Atanu/exp_2021_fluid_ants/soft_rods'
     color = '/white_rod/'  # 'white'
-    type = 'white_5cm_hinged'
+    type = 'white_20cm_hinged'
     data =  '/gif/'
-    video = 'S5120007'
+    video = 'S5170001'
 
     dataContour = pd.read_pickle(vidpath + color + type + data + video + '_contourDict.pkl')
 
@@ -197,6 +197,6 @@ if __name__ == '__main__':
 
     l = [np.sqrt((t[0]-g[0])**2 + (t[1]-g[1])**2) for t in tail]
     lmax = int(np.max(l))
-    Npoints = 6  # Number of points to track (including both ends)
+    Npoints = 21  # Number of points to track (including both ends)
 
     main(dataContour, dataSkeleton, g, lmax, Npoints)
