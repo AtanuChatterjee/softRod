@@ -73,20 +73,21 @@ def get_data(skeleton_image):
     return data
 
 
-def main(cap, left, top, right, bottom):
+def main(cap, left, top, right, bottom, start_frame=0, end_frame=None):
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-    count = 0
-    currFrame = 0
-
     contourDict = {}
     skeletonDict = {}
 
-    while True:
+    # set current frame to start frame
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
 
+    while True:
         currFrame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+        if end_frame is not None and currFrame > end_frame:
+            break
 
         ret, frame = cap.read()
 
@@ -118,9 +119,9 @@ def main(cap, left, top, right, bottom):
 
         if ret == True:
             print("Frame: {}".format(currFrame))
+
             cv2.imshow('frame', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                # if (cv2.waitKey(1) & 0xFF == ord('q')) or (1000 <= currFrame):
+            if (cv2.waitKey(1) & 0xFF == ord('q')) or (end_frame is not None and currFrame == end_frame):
                 break
         else:
             print("No stream ...")
@@ -128,6 +129,7 @@ def main(cap, left, top, right, bottom):
 
     cap.release()
     cv2.destroyAllWindows()
+
 
     print('saving data ...')
 
@@ -146,7 +148,7 @@ if __name__ == '__main__':
     color = '/white_rod/'  # 'white'
     type = 'white_5cm_hinged'
     data = '/gif/'
-    video = 'S5120007'
+    video = 'S5120006'
 
     left = 50
     top = 100
@@ -156,4 +158,4 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(vidpath + color + type + '/' + video + '.mp4')
     fps = cap.get(cv2.CAP_PROP_FPS)
     print('FPS', fps)
-    main(cap, left, top, right, bottom)
+    main(cap, left, top, right, bottom, start_frame=30000, end_frame=33300)

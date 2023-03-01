@@ -150,15 +150,22 @@ def main(dataContour, dataSkeleton, g, lmax, Npoints):
     rx = [(x - x[0]) for k, x in enumerate(tx)]
     ry = [(y - y[0]) for k, y in enumerate(ty)]
 
-    # Create a pandas DataFrame to store the x and y values for each node
-    df_xy = pd.DataFrame({'Node{}x'.format(i): rx[i] for i in range(len(rx))})
-    df_xy = df_xy.assign(**{'Node{}y'.format(i): ry[i] for i in range(len(ry))})
-    df_xy.index = np.arange(1, len(df_xy) + 1)
-
     theta = np.degrees(np.arctan2(ry, rx)) % 360  # angle of tracked pt. with respect to pivot pt.
-    df_theta = pd.DataFrame(theta)
-    df_theta = pd.DataFrame(theta, columns=['Node{}'.format(cols) for cols in df_theta.columns])
+    df_theta = pd.DataFrame(theta, columns=['Node{}'.format(k + 1) for k in range(len(theta))])
     df_theta.index = np.arange(1, len(df_theta) + 1)
+
+    # Create a pandas DataFrame to store the x and y values for each node
+    if len(rx) > 0 and len(ry) > 0:
+        cols = len(rx)
+        df_xy = pd.DataFrame(np.empty((0, cols * 2)),
+                             columns=['Node{}x'.format(k + 1) for k in range(cols)] + ['Node{}y'.format(k + 1) for k in
+                                                                                       range(cols)])
+        df_xy.index = np.arange(1, len(df_xy) + 1)
+        for k in range(cols):
+            df_xy.loc[1, 'Node{}x'.format(k + 1)] = rx[k]
+            df_xy.loc[1, 'Node{}y'.format(k + 1)] = ry[k]
+    else:
+        df_xy = pd.DataFrame(columns=['Node1x', 'Node1y'])
 
     df_xy.to_csv(vidpath + color + type + data + video + '_output_xy.csv', index_label='Frame_No')
     df_theta.to_csv(vidpath + color + type + data + video + '_output_theta.csv', index_label='Frame_No')
@@ -170,9 +177,9 @@ if __name__ == '__main__':
 
     vidpath = 'Z:/Atanu/exp_2021_fluid_ants/soft_rods'
     color = '/white_rod/'  # 'white'
-    type = 'white_20cm_hinged'
+    type = 'white_5cm_hinged'
     data =  '/gif/'
-    video = 'S5170001'
+    video = 'S5120006'
 
     dataContour = pd.read_pickle(vidpath + color + type + data + video + '_contourDict.pkl')
 
@@ -197,6 +204,6 @@ if __name__ == '__main__':
 
     l = [np.sqrt((t[0]-g[0])**2 + (t[1]-g[1])**2) for t in tail]
     lmax = int(np.max(l))
-    Npoints = 21  # Number of points to track (including both ends)
+    Npoints = 6  # Number of points to track (including both ends)
 
     main(dataContour, dataSkeleton, g, lmax, Npoints)
