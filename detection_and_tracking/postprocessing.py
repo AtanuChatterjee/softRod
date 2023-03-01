@@ -146,28 +146,18 @@ def main(dataContour, dataSkeleton, g, lmax, Npoints):
 
     print('saving data ...')
 
-    # Calculate the x- and y-distances of each tracked point from the pivot point
     rx = [(x - x[0]) for k, x in enumerate(tx)]
     ry = [(y - y[0]) for k, y in enumerate(ty)]
+    r = [(a ** 2 + b ** 2) ** 0.5 for a, b in zip(rx, ry)]  # distance of tracked pt. from pivot pt.
 
     theta = np.degrees(np.arctan2(ry, rx)) % 360  # angle of tracked pt. with respect to pivot pt.
-    df_theta = pd.DataFrame(theta, columns=['Node{}'.format(k + 1) for k in range(len(theta))])
-    df_theta.index = np.arange(1, len(df_theta) + 1)
 
-    # Create a pandas DataFrame to store the x and y values for each node
-    if len(rx) > 0 and len(ry) > 0:
-        cols = len(rx)
-        df_xy = pd.DataFrame(np.empty((0, cols * 2)),
-                             columns=['Node{}x'.format(k + 1) for k in range(cols)] + ['Node{}y'.format(k + 1) for k in
-                                                                                       range(cols)])
-        df_xy.index = np.arange(1, len(df_xy) + 1)
-        for k in range(cols):
-            df_xy.loc[1, 'Node{}x'.format(k + 1)] = rx[k]
-            df_xy.loc[1, 'Node{}y'.format(k + 1)] = ry[k]
-    else:
-        df_xy = pd.DataFrame(columns=['Node1x', 'Node1y'])
+    df_r, df_theta = pd.DataFrame(r), pd.DataFrame(theta)
 
-    df_xy.to_csv(vidpath + color + type + data + video + '_output_xy.csv', index_label='Frame_No')
+    df_r = pd.DataFrame(r, columns=['Node{}'.format(cols) for cols in df_r.columns])
+    df_theta = pd.DataFrame(theta, columns=['Node{}'.format(cols) for cols in df_theta.columns])
+    df_r.index, df_theta.index = np.arange(1, len(df_r) + 1), np.arange(1, len(df_theta) + 1)
+    df_r.to_csv(vidpath + color + type + data + video + '_output_r.csv', index_label='Frame_No')
     df_theta.to_csv(vidpath + color + type + data + video + '_output_theta.csv', index_label='Frame_No')
 
     print('done!')
@@ -177,9 +167,9 @@ if __name__ == '__main__':
 
     vidpath = 'Z:/Atanu/exp_2021_fluid_ants/soft_rods'
     color = '/white_rod/'  # 'white'
-    type = 'white_5cm_hinged'
+    type = 'white_10cm_hinged'
     data =  '/gif/'
-    video = 'S5120006'
+    video = 'S5140003'
 
     dataContour = pd.read_pickle(vidpath + color + type + data + video + '_contourDict.pkl')
 

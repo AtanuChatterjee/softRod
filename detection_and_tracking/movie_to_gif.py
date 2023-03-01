@@ -2,22 +2,22 @@ import imageio
 import cv2
 
 # open video file
-cap = cv2.VideoCapture('Z:/Atanu/exp_2021_fluid_ants/soft_rods/white_rod/white_5cm_hinged/S5120006.MP4')
+cap = cv2.VideoCapture('Z:/Atanu/exp_videos_2021/processed/sorted_by_cargo_size/4_cm/S4690015/output_vid.avi')
 
 # set start and end frames
-start_frame = 32500
-end_frame = 32800
+start_frame = 5000
+end_frame = 5100
 
 # set current frame to start frame
 currFrame = start_frame
 
 # set crop parameters
-left = 50
+left = 100
 top = 100
-right = 800
+right = 1500
 bottom = 850
 # create output file name
-output_filename = 'Z:/Atanu/exp_2021_fluid_ants/soft_rods/white_rod/white_5cm_hinged/S5120006.gif'
+output_filename = 'Z:/Atanu/exp_videos_2021/processed/sorted_by_cargo_size/4_cm/S4690015/output_vid.gif'
 
 # create list of frames to convert
 frames = []

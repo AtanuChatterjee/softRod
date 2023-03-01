@@ -146,11 +146,11 @@ if __name__ == '__main__':
     # path = '/Users/atanu/Desktop/soft_pendulum/videos/'
     vidpath = 'Z:/Atanu/exp_2021_fluid_ants/soft_rods'
     color = '/white_rod/'  # 'white'
-    type = 'white_5cm_hinged'
+    type = 'white_10cm_hinged'
     data = '/gif/'
-    video = 'S5120006'
+    video = 'S5140003'
 
-    left = 50
+    left = 100
     top = 100
     right = 800
     bottom = 850
@@ -158,4 +158,4 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(vidpath + color + type + '/' + video + '.mp4')
     fps = cap.get(cv2.CAP_PROP_FPS)
     print('FPS', fps)
-    main(cap, left, top, right, bottom, start_frame=30000, end_frame=33300)
+    main(cap, left, top, right, bottom, start_frame=0, end_frame=2000)
